@@ -47,3 +47,4 @@ message_dialog_return_type_t adv_dialog_yes_no_cancel(pax_buf_t* icon, const cha
         4
 #define ADV_DIALOG_FOOTER_OK_TEXT(...) \
     ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), __VA_ARGS__}}), 2
+

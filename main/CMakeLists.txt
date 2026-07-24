@@ -1,6 +1,8 @@
 if (CONFIG_BSP_TARGET_TANMATSU)
 list(APPEND files "tanmatsu_coprocessor.bin")
 list(APPEND files "p4_bootloader.bin")
+elseif(CONFIG_BSP_TARGET_WHY2025)
+list(APPEND files "p4_bootloader.bin")
 endif()
 
 idf_build_get_property(idf_target IDF_TARGET)

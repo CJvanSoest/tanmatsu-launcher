@@ -130,7 +130,7 @@ static void fix_rtc_out_of_bounds(void) {
 }
 
 bool wifi_stack_get_initialized(void) {
-#if defined(CONFIG_BSP_TARGET_TANMATSU)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) // TODO: Check if we can do this
     bsp_radio_state_t state;
     bsp_power_get_radio_state(&state);
     return wifi_stack_initialized && state == BSP_POWER_RADIO_STATE_APPLICATION;
@@ -154,7 +154,7 @@ static void wifi_task(void* pvParameters) {
 
     ESP_LOGI(TAG, "WiFi task started");
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) // TODO: Check if we can do this
     radio_system_protocol_information_t radio_information = {0};
     if (radio_system_protocol_get_information(&radio_information) == ESP_OK) {
         wifi_firmware_version_mismatch = (strcmp(radio_information.firmware_version, "v3.4.0") != 0);
@@ -312,7 +312,7 @@ static void monitor_task(void* pvParameters) {
 
 esp_err_t check_i2c_bus(void) {
     i2c_master_bus_handle_t i2c_bus_handle_internal;
-#if defined(CONFIG_BSP_TARGET_TANMATSU)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) // TODO: We need to split this to check the BMI270 here and maybe the BME690
     ESP_ERROR_CHECK(bsp_i2c_primary_bus_get_handle(&i2c_bus_handle_internal));
     esp_err_t ret_codec  = i2c_master_probe(i2c_bus_handle_internal, 0x08, 50);
     esp_err_t ret_bmi270 = i2c_master_probe(i2c_bus_handle_internal, 0x68, 50);
@@ -632,7 +632,7 @@ void app_main(void) {
     bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_APPLICATION);
 
     startup_dialog("Initializing radio...");
-#if defined(CONFIG_BSP_TARGET_TANMATSU)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_WHY2025)
     ESP_ERROR_CHECK(lora_init_remote(&lora_handle, 32));
     radio_system_protocol_init();  // Return value ignored
 #endif
@@ -699,8 +699,7 @@ void app_main(void) {
 
     bsp_power_set_usb_host_boost_enabled(true);
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD) || \
-    defined(CONFIG_BSP_TARGET_ESP32_S31_KORVO_1)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD) || defined(CONFIG_BSP_TARGET_ESP32_S31_KORVO_1) || defined(CONFIG_BSP_TARGET_WHY2025)
     res = hid_kbd_init();
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize USB HID keyboard support");
@@ -721,7 +720,7 @@ void app_main(void) {
     plugin_manager_load_autostart();
 #endif
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) // TODO: Can we do this?
     uint8_t welcome = 0;
     nvs_settings_get_welcome_message_state(&welcome);
 
@@ -754,3 +753,4 @@ void app_main(void) {
 
     menu_home();
 }
+

@@ -9,7 +9,7 @@
 
 static const char* TAG = "Bootloader update";
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_WHY2025)
 
 extern uint8_t const bootloader_bin_start[] asm("_binary_p4_bootloader_bin_start");
 extern uint8_t const bootloader_bin_end[] asm("_binary_p4_bootloader_bin_end");

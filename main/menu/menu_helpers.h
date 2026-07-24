@@ -28,3 +28,4 @@ void menu_run_list(menu_t* menu, gui_element_icontext_t* header, size_t header_c
 void menu_run_grid(menu_t* menu, gui_element_icontext_t* header, size_t header_count,
                    gui_element_icontext_t* footer_left, size_t footer_left_count, gui_element_icontext_t* footer_right,
                    size_t footer_right_count, menu_action_cb_t action_cb, void* user_ctx, bool home_is_back);
+

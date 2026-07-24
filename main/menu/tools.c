@@ -82,3 +82,4 @@ void menu_tools(void) {
     menu_run_list(&menu, ((gui_element_icontext_t[]){{get_icon(ICON_EXTENSION), "Tools"}}), 1, MENU_FOOTER_BACK,
                   MENU_FOOTER_NAV_SELECT, on_action, NULL, true);
 }
+

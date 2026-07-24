@@ -14,7 +14,7 @@
 #include "menu/message_dialog.h"
 #include "wifi_connection.h"
 
-#ifdef CONFIG_BSP_TARGET_TANMATSU
+#ifdef CONFIG_BSP_TARGET_TANMATSU // We would need to do something with this. We can do this
 
 #define BASE_URL "https://ota.tanmatsu.cloud/radio-v3.4.0"
 

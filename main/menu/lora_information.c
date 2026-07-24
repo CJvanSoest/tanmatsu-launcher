@@ -277,3 +277,4 @@ void menu_lora_information(void) {
                frequency_error, frequency_error_avg, applied_frequency_offset);
     }
 }
+

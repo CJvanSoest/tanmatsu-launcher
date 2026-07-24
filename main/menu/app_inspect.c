@@ -307,3 +307,4 @@ bool menu_app_inspect(pax_buf_t* buffer, gui_theme_t* theme, app_t* app) {
         }
     }
 }
+
