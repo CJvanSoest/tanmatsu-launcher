@@ -25,7 +25,7 @@ static sdmmc_card_t*        card          = NULL;
 static const char           mount_point[] = "/sd";
 static sd_pwr_ctrl_handle_t sd_pwr_handle = NULL;
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_WHY2025)
 static char const TAG[] = "sdcard";
 
 #if defined(CONFIG_ESP_HOSTED_SDIO_HOST_INTERFACE) && (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0))

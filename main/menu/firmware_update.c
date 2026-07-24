@@ -27,7 +27,8 @@
 #elif defined(CONFIG_BSP_TARGET_HACKADAY2025)
 #define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/hackaday2025-"
 #else
-#error "Unsupported target for firmware update"
+#define STUB_OTA
+#warning "Unsupported target for firmware update"
 #endif
 
 static void firmware_update_callback(const char* status_text, uint8_t progress) {
@@ -35,7 +36,7 @@ static void firmware_update_callback(const char* status_text, uint8_t progress) 
     progress_dialog(get_icon(ICON_SYSTEM_UPDATE), "Firmware update", status_text ? status_text : "Updating...",
                     progress, true);
 }
-
+#ifndef STUB_OTA
 void ota_update_experimental(void) {
     ota_update(OTA_BASE_URL "experimental.bin", firmware_update_callback);
 }
@@ -47,3 +48,16 @@ void ota_update_staging(void) {
 void ota_update_stable(void) {
     ota_update(OTA_BASE_URL "stable.bin", firmware_update_callback);
 }
+#else
+void ota_update_experimental(void) {
+    printf("Sorry, no OTA support\r\n");
+}
+
+void ota_update_staging(void) {
+    printf("Sorry, no OTA support\r\n");
+}
+
+void ota_update_stable(void) {
+    printf("Sorry, no OTA support\r\n");
+}
+#endif

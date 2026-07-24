@@ -242,6 +242,10 @@ void theme_initialize(void) {
     theme.menu.grid_horizontal_count = 3;
     theme.menu.grid_vertical_count   = 1;
 #endif
+
+#if defined(CONFIG_BSP_TARGET_WHY2025)
+    theme.menu.grid_vertical_count       = 5;
+#endif
 }
 
 gui_theme_t* get_theme(void) {

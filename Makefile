@@ -39,6 +39,8 @@ else ifeq ($(DEVICE), esp32-p4-function-ev-board)
 IDF_TARGET ?= esp32p4
 else ifeq ($(DEVICE), esp32-s31-korvo-1)
 IDF_TARGET ?= esp32s31
+else ifeq ($(DEVICE), why2025)
+IDF_TARGET ?= esp32p4
 else ifeq ($(DEVICE), mch2022)
 IDF_TARGET ?= esp32
 else ifeq ($(DEVICE), hackaday2025)
