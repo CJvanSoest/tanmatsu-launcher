@@ -15,6 +15,8 @@ typedef enum {
     RADIO_SYSTEM_PROTOCOL_TYPE_NVS_READ          = 0x11,
     RADIO_SYSTEM_PROTOCOL_TYPE_NVS_WRITE         = 0x12,
     RADIO_SYSTEM_PROTOCOL_TYPE_NVS_DELETE        = 0x13,
+    RADIO_SYSTEM_PROTOCOL_TYPE_BACKLIGHT_SET     = 0x20,
+    RADIO_SYSTEM_PROTOCOL_TYPE_BACKLIGHT_GET     = 0x21,
 } radio_system_protocol_packet_type_t;
 
 typedef struct {
@@ -79,6 +81,11 @@ typedef struct {
     };
 } __attribute__((packed)) radio_system_protocol_nvs_value_t;
 
+typedef struct {
+    uint8_t backlight_type;
+    uint8_t backlight_value;
+} __attribute__((packed)) radio_system_backlight_get_set_packet_t;
+
 // Functions
 
 esp_err_t radio_system_protocol_init(void);
@@ -94,3 +101,6 @@ esp_err_t radio_system_protocol_nvs_read(const char* namespace_name, const char*
 esp_err_t radio_system_protocol_nvs_write(const radio_system_protocol_nvs_value_t* value, size_t value_size);
 esp_err_t radio_system_protocol_nvs_delete(const char* namespace_name, const char* key,
                                            radio_system_protocol_nvs_value_type_t type);
+
+esp_err_t radio_system_protocol_backlight_set(uint8_t channel, uint8_t percentage);
+esp_err_t radio_system_protocol_backlight_get(uint8_t channel, uint8_t* percentage);

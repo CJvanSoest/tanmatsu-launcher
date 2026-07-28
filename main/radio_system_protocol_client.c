@@ -133,7 +133,7 @@ esp_err_t radio_system_protocol_get_information(radio_system_protocol_informatio
     }
     radio_system_protocol_header_t* response_header = (radio_system_protocol_header_t*)response;
     if (response_header->sequence_number != header->sequence_number) {
-        ESP_LOGE(TAG, "Invalid response sequence number: %u\r\n", response_header->sequence_number);
+        ESP_LOGE(TAG, "Invalid response sequence number: %u, expected: %u\r\n", response_header->sequence_number,header->sequence_number);
         return ESP_FAIL;
     }
     if (response_header->type != RADIO_SYSTEM_PROTOCOL_TYPE_GET_INFORMATION) {
@@ -287,6 +287,60 @@ esp_err_t radio_system_protocol_nvs_delete(const char* namespace_name, const cha
 esp_err_t radio_system_protocol_set_board_revision(uint8_t board_revision) {
     return ESP_ERR_NOT_SUPPORTED;
 }
+
+esp_err_t radio_system_protocol_backlight_get(uint8_t channel, uint8_t* percentage) {
+    if (percentage == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    size_t  request_length = sizeof(radio_system_protocol_header_t) + sizeof(radio_system_backlight_get_set_packet_t);
+    uint8_t request[request_length];
+    radio_system_protocol_header_t* header = (radio_system_protocol_header_t*)request;
+    header->sequence_number                = radio_system_sequence_number;
+    header->type                           = RADIO_SYSTEM_PROTOCOL_TYPE_BACKLIGHT_GET;
+    uint8_t   response[sizeof(radio_system_protocol_header_t) + sizeof(radio_system_backlight_get_set_packet_t)] = {0};
+    size_t    response_length                                                                                = 0;
+    esp_err_t result =
+        radio_system_protocol_transaction(request, request_length, response, &response_length, sizeof(response));
+    if (result != ESP_OK) {
+        ESP_LOGE(TAG, "Transaction failed");
+        return result;
+    }
+    if (response_length < sizeof(radio_system_protocol_header_t) + sizeof(radio_system_backlight_get_set_packet_t)) {
+        ESP_LOGE(TAG, "Invalid response length: %u\r\n", response_length);
+        return ESP_FAIL;
+    }
+    radio_system_protocol_header_t* response_header = (radio_system_protocol_header_t*)response;
+    radio_system_backlight_get_set_packet_t* backlight_response = (radio_system_backlight_get_set_packet_t*)(response + sizeof(radio_system_protocol_header_t));
+    if (response_header->sequence_number != header->sequence_number) {
+        ESP_LOGE(TAG, "Invalid response sequence number: %u, expected: %u\r\n", response_header->sequence_number,header->sequence_number);
+        return ESP_FAIL;
+    }
+    if (response_header->type != RADIO_SYSTEM_PROTOCOL_TYPE_BACKLIGHT_GET) {
+        ESP_LOGE(TAG, "Invalid response type: %u\r\n", response_header->type);
+        return ESP_FAIL;
+    }
+    *percentage = backlight_response->backlight_value;
+    return ESP_OK;
+}
+esp_err_t radio_system_protocol_backlight_set(uint8_t channel, uint8_t percentage) {
+
+    size_t request_length = sizeof(radio_system_protocol_header_t) + sizeof(radio_system_backlight_get_set_packet_t);
+
+    uint8_t                         request[512] = {0};
+    radio_system_protocol_header_t* header       = (radio_system_protocol_header_t*)request;
+    header->sequence_number                      = radio_system_sequence_number;
+    header->type                                 = RADIO_SYSTEM_PROTOCOL_TYPE_BACKLIGHT_SET;
+    radio_system_backlight_get_set_packet_t* backlight_request = (radio_system_backlight_get_set_packet_t*)(request + sizeof(radio_system_protocol_header_t));
+    backlight_request->backlight_type = channel;
+    backlight_request->backlight_value = percentage;
+    ESP_LOGI(TAG, "Setting backlight on channel %d to %d", channel, percentage);
+    uint8_t   response[sizeof(radio_system_protocol_header_t)] = {0};
+    size_t    response_length                                  = 0;
+    esp_err_t result =
+        radio_system_protocol_transaction(request, request_length, response, &response_length, sizeof(response));
+    if (result != ESP_OK) return result;
+    return validate_response(response, response_length, header->sequence_number, RADIO_SYSTEM_PROTOCOL_TYPE_ACK, 0);
+}
 #else
 
 esp_err_t radio_system_protocol_init(void) {
@@ -320,6 +374,14 @@ esp_err_t radio_system_protocol_nvs_write(const radio_system_protocol_nvs_value_
 
 esp_err_t radio_system_protocol_nvs_delete(const char* namespace_name, const char* key,
                                            radio_system_protocol_nvs_value_type_t type) {
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t radio_system_protocol_backlight_set(uint8_t channel, uint8_t percentage) {
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t radio_system_protocol_backlight_get(uint8_t channel, uint8_t *percentage) {
     return ESP_ERR_NOT_SUPPORTED;
 }
 

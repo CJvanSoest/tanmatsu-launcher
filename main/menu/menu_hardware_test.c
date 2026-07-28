@@ -148,11 +148,11 @@ static void render(menu_t* menu, bool partial, bool icons) {
     }
 
     uint8_t position_index = 2;
-
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
     bool usb_enabled = false;
     bsp_power_get_usb_host_boost_enabled(&usb_enabled);
     menu_set_value(menu, position_index++, usb_enabled ? "On" : "Off");
-
+#endif
     uint8_t kb_backlight = 0;
     bsp_input_get_backlight_brightness(&kb_backlight);
     char kb_backlight_str[6];
@@ -204,7 +204,9 @@ void menu_hardware_test(void) {
     menu_set_value(&menu, 0, "Click to run");
     menu_insert_item_value(&menu, "Keyboard", "", NULL, (void*)ACTION_KEYBOARD, -1);
     menu_set_value(&menu, 1, "Click to run");
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
     menu_insert_item_value(&menu, "USB host port power", "", NULL, (void*)ACTION_TOGGLE_USB_HOST_POWER, -1);
+#endif
     menu_insert_item_value(&menu, "Keyboard backlight", "", NULL, (void*)ACTION_TOGGLE_KEYBOARD_BACKLIGHT, -1);
     // menu_insert_item_value(&menu, "Radio mode", "", NULL, (void*)ACTION_TOGGLE_RADIO_MODE, -1);
     menu_insert_item_value(&menu, "Gyroscope", "", NULL, (void*)ACTION_TOGGLE_GYROSCOPE, -1);

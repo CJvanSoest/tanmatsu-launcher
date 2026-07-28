@@ -154,7 +154,7 @@ static void wifi_task(void* pvParameters) {
 
     ESP_LOGI(TAG, "WiFi task started");
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) // TODO: Check if we can do this
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_WHY2025) // TODO: Check if we can do this
     radio_system_protocol_information_t radio_information = {0};
     if (radio_system_protocol_get_information(&radio_information) == ESP_OK) {
         wifi_firmware_version_mismatch = (strcmp(radio_information.firmware_version, "v3.4.0") != 0);

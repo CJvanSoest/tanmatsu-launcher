@@ -55,6 +55,11 @@ static sd_pwr_ctrl_handle_t initialize_sd_ldo(void) {
         return NULL;
     }
     // Don't set voltage here - let SDMMC driver set it via host.io_voltage (3.3V default)
+    res = sd_pwr_ctrl_set_io_voltage(pwr_ctrl_handle, 3300);
+    if (res != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set LDO voltage");
+        return NULL;
+    }
     return pwr_ctrl_handle;
 }
 

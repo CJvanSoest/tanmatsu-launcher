@@ -311,7 +311,7 @@ void radio_update(char* path, bool compressed, uint32_t uncompressed_size) {
 void radio_install(const char* instructions_filename) {
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();
-#if defined(CONFIG_BSP_TARGET_TANMATSU) ssssssss|| defined(CONFIG_BSP_TARGET_WHY2025)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_WHY2025)
     pax_background(buffer, theme->palette.color_background);
     gui_header_draw(buffer, theme,
                     ((gui_element_icontext_t[]){{get_icon(ICON_SYSTEM_UPDATE), "Radio firmware installation"}}), 1,

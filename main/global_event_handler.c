@@ -106,6 +106,7 @@ static bool input_hook_callback(bsp_input_event_t* event, void* user_data) {
 esp_err_t global_event_handler_initialize(void) {
     input_hook_id = bsp_input_hook_register(input_hook_callback, NULL);
     if (input_hook_id < 0) {
+        ESP_LOGE(TAG, "Input hook failed to register");
         return ESP_FAIL;
     }
 
