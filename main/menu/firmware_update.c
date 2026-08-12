@@ -28,7 +28,7 @@
 #define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/hackaday2025-"
 #else
 #define STUB_OTA
-#warning "Unsupported target for firmware update"
+#pragma message "Unsupported target for firmware update"
 #endif
 
 static void firmware_update_callback(const char* status_text, uint8_t progress) {

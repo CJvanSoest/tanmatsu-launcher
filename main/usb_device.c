@@ -7,12 +7,14 @@
 #include "sdkconfig.h"
 #if defined(CONFIG_IDF_TARGET_ESP32P4) || defined(CONFIG_IDF_TARGET_ESP32S3)
 
+#include <driver/gpio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "badgelink.h"
 #include "bsp/device.h"
 #include "esp_log.h"
 #include "esp_mac.h"
+#include "esp_private/usb_phy.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -107,6 +109,13 @@ static const uint8_t s_cfg_desc[] = {
     // Interface number, string index, EP Out & EP In address, EP size
     TUD_VENDOR_DESCRIPTOR(ITF_NUM_VENDOR, STRING_DESC_VENDOR, EPNUM_VENDOR, (0x80 | EPNUM_VENDOR), 32),
 };
+static const uint8_t s_cfg_desc_hs[] = {
+    // Configuration number, interface count, string index, total length, attribute, power in mA
+    TUD_CONFIG_DESCRIPTOR(1, ITF_COUNT, 0, TUSB_DESCRIPTOR_TOTAL_LEN, 0, 100),
+
+    // Interface number, string index, EP Out & EP In address, EP size
+    TUD_VENDOR_DESCRIPTOR(ITF_NUM_VENDOR, STRING_DESC_VENDOR, EPNUM_VENDOR, (0x80 | EPNUM_VENDOR), 512),
+};
 
 //--------------------------------------------------------------------+
 // BOS Descriptor
@@ -178,7 +187,27 @@ const tusb_desc_webusb_url_t desc_url = {.bLength         = 3 + sizeof(URL) - 1,
                                          .url             = URL};
 
 void usb_mode_set(usb_mode_t mode) {
-#if defined(CONFIG_IDF_TARGET_ESP32P4)
+#if defined(CONFIG_IDF_TARGET_ESP32P4) && !defined(CONFIG_BSP_WHY2025_JTAG)
+    // Select USB mode by swapping output of the USBMUX chip
+    switch (mode) {
+        case USB_DEVICE:
+            tud_disconnect();
+            gpio_set_level(2, 0); // Sets MUX to P4
+            vTaskDelay(pdTICKS_TO_MS(500));
+            tud_connect();
+            break;
+        case USB_DEBUG:
+            tud_disconnect();
+            gpio_set_level(2, 1); // Sets MUX to C6
+            // Debugging will be for the C6
+            break;
+        case USB_DISABLED:
+        default:
+
+            break;
+    }
+    current_mode = mode;
+#elif defined(CONFIG_IDF_TARGET_ESP32P4) && defined(CONFIG_BSP_WHY2025_JTAG)
     const usb_serial_jtag_pull_override_vals_t override_disable_usb = {
         .dm_pd = true, .dm_pu = false, .dp_pd = true, .dp_pu = false};
     const usb_serial_jtag_pull_override_vals_t override_enable_usb = {
@@ -272,14 +301,27 @@ void usb_initialize(void) {
              mac[5]);
 
     tinyusb_config_t tusb_cfg             = TINYUSB_CONFIG_FULL_SPEED(NULL, NULL);
+#if defined(CONFIG_BSP_TARGET_WHY2025) && !defined(CONFIG_BSP_WHY2025_JTAG)
+    usb_phy_config_t phy_conf = {
+        .controller = USB_PHY_CTRL_OTG, // or USB_PHY_CTRL_OTG
+        .target = USB_PHY_TARGET_INT,           // or external target
+        .otg_mode = USB_OTG_MODE_DEVICE,
+    };
+    usb_phy_handle_t phy_handle = NULL;
+    usb_new_phy(&phy_conf, &phy_handle);
+    tusb_cfg.phy.skip_setup = true;
+    tusb_cfg.port = TINYUSB_PORT_HIGH_SPEED_0;
+    gpio_set_direction(2, GPIO_MODE_OUTPUT);
+    gpio_set_level(2, 1); // Default level. This connects to the C6
+    tusb_cfg.descriptor.high_speed_config = s_cfg_desc_hs;
+#endif
+
     tusb_cfg.descriptor.device            = &desc_device;
     tusb_cfg.descriptor.string            = s_str_desc;
     tusb_cfg.descriptor.string_count      = sizeof(s_str_desc) / sizeof(s_str_desc[0]);
     tusb_cfg.descriptor.full_speed_config = s_cfg_desc;
     ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
-
     ESP_LOGI(TAG, "USB initialization DONE");
-
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
     // Return to debug mode after initializing the USB stack
     usb_mode_set(USB_DEBUG);

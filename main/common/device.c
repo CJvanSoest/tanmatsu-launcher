@@ -17,7 +17,7 @@ bool device_has_rtc(void) {
 }
 
 bool device_has_usb_switching(void) {
-#if defined(CONFIG_IDF_TARGET_ESP32P4) || defined(CONFIG_IDF_TARGET_ESP32S3) || defined(CONFIG_BSP_TARGET_WHY2025)
+#if defined(CONFIG_IDF_TARGET_ESP32P4) || defined(CONFIG_IDF_TARGET_ESP32S3)
     return true;
 #else
     return false;

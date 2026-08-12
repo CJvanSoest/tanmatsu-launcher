@@ -1,7 +1,7 @@
 #include "usb_debug_listener.h"
 #include "sdkconfig.h"
 
-#ifdef CONFIG_IDF_TARGET_ESP32P4
+#if defined(CONFIG_IDF_TARGET_ESP32P4) && !defined(CONFIG_BSP_WHY2025_JTAG) // TODO: Check with Renze if this is ok
 
 #include <string.h>
 #include "driver/usb_serial_jtag.h"
