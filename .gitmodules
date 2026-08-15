@@ -1,0 +1,6 @@
+[submodule "components/badge-bsp"]
+	path = components/badge-bsp
+	url = https://github.com/Senna-chan/esp32-component-badge-bsp.git
+[submodule "components-tanmatsu-wifi"]
+	path = components/tanmatsu-wifi
+	url = https://github.com/Senna-chan/esp32-component-tanmatsu-wifi.git
