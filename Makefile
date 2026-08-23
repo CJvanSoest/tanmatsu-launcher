@@ -205,7 +205,7 @@ monitor:
 	source "$(IDF_SOURCE)" && idf.py $(IDF_PARAMS) monitor -p $(PORT)
 
 # Ask the launcher (running in USB_DEBUG / flash-monitor mode) to switch its
-# USB into BadgeLink (USB_DEVICE) mode. The listener in main/usb_debug_listener.c
+# USB into BadgeLink (USB_DEVICE) mode. The listener in main/usb_device.c
 # reacts to the token "BADGELINK\n" on the USB-serial/JTAG peripheral.
 #
 # PORT accepts either a local device path (e.g. /dev/ttyACM0) or an

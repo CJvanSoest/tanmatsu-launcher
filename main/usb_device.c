@@ -1,16 +1,18 @@
 // SPDX-FileCopyrightText: 2019 Ha Thach (tinyusb.org)
 // SPDX-License-Identifier: MIT
 // SPDX-FileContributor: 2022-2024 Espressif Systems (Shanghai) CO LTD
-// SPDX-FileContributor: 2025 Nicolai Electronics
+// SPDX-FileContributor: 2026 Nicolai Electronics
 
 #include "usb_device.h"
 #include "sdkconfig.h"
 #if defined(CONFIG_IDF_TARGET_ESP32P4) || defined(CONFIG_IDF_TARGET_ESP32S3)
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "badgelink.h"
 #include "bsp/device.h"
+#include "driver/usb_serial_jtag.h"
 #include "esp_log.h"
 #include "esp_mac.h"
 #include "esp_timer.h"
@@ -177,6 +179,36 @@ const tusb_desc_webusb_url_t desc_url = {.bLength         = 3 + sizeof(URL) - 1,
                                          .bScheme         = 1,  // 0: http, 1: https
                                          .url             = URL};
 
+#define LISTENER_TASK_STACK_SIZE 4096
+#define LINE_BUFFER_SIZE         32
+
+static const char TOKEN_BADGELINK[] = "BADGELINK";
+static const char ACK_BADGELINK[]   = "OK switching to badgelink mode\r\n";
+
+static const char TOKEN_BADGESERIAL[] = "BADGESERIAL";
+static const char ACK_BADGESERIAL[]   = "OK switching to badgelink over debug mode\r\n";
+
+static int dummy_log_vprintf(const char* fmt, va_list args) {
+    char buf[160];
+    int  len = vsnprintf(buf, sizeof(buf), fmt, args);
+    return len;
+}
+
+static vprintf_like_t real_log_printf = NULL;
+
+static void disable_log_output(void) {
+    if (real_log_printf == NULL) {
+        real_log_printf = esp_log_set_vprintf(dummy_log_vprintf);
+    }
+}
+
+static void enable_log_output(void) {
+    if (real_log_printf != NULL) {
+        esp_log_set_vprintf(real_log_printf);
+        real_log_printf = NULL;
+    }
+}
+
 void usb_mode_set(usb_mode_t mode) {
 #if defined(CONFIG_IDF_TARGET_ESP32P4)
     const usb_serial_jtag_pull_override_vals_t override_disable_usb = {
@@ -207,6 +239,10 @@ void usb_mode_set(usb_mode_t mode) {
         usb_serial_jtag_ll_phy_disable_pull_override();
     }
     current_mode = mode;
+
+    if (mode == USB_DEBUG) {
+        enable_log_output();
+    }
 #endif
 
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
@@ -258,10 +294,72 @@ usb_mode_t usb_mode_get(void) {
     return current_mode;
 }
 
+static void usb_debug_listener_task(void* pvParameters) {
+    usb_serial_jtag_driver_config_t config = {
+        .rx_buffer_size = 256,
+        .tx_buffer_size = 256,
+    };
+    esp_err_t res = usb_serial_jtag_driver_install(&config);
+    if (res != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to install USB-serial/JTAG driver: %d", res);
+        vTaskDelete(NULL);
+        return;
+    }
+
+    ESP_LOGI(TAG, "USB debug listener task started");
+
+    char   line[LINE_BUFFER_SIZE];
+    size_t line_len = 0;
+
+    while (true) {
+        uint8_t buffer[256];
+        int     n = usb_serial_jtag_read_bytes(buffer, sizeof(buffer), portMAX_DELAY);
+        if (current_mode == USB_DEBUG) {
+            bool badgelink_over_debug_trigger = false;
+            if (real_log_printf == NULL) {  // Log is enabled
+                for (int i = 0; i < n; i++) {
+                    char c = (char)buffer[i];
+                    if (c == '\r') continue;
+                    if (c == '\n') {
+                        line[line_len] = '\0';
+                        if (strcmp(line, TOKEN_BADGELINK) == 0) {
+                            usb_serial_jtag_write_bytes((const uint8_t*)ACK_BADGELINK, strlen(ACK_BADGELINK),
+                                                        pdMS_TO_TICKS(100));
+                            ESP_LOGI(TAG, "Switching to BadgeLink USB mode");
+                            usb_mode_set(USB_DEVICE);
+                            // Peripheral is now off-bus; reads will block until the
+                            // user switches back to USB_DEBUG via the home menu.
+                        } else if (strcmp(line, TOKEN_BADGESERIAL) == 0) {
+                            usb_serial_jtag_write_bytes((const uint8_t*)ACK_BADGESERIAL, strlen(ACK_BADGESERIAL),
+                                                        pdMS_TO_TICKS(100));
+                            ESP_LOGI(TAG, "Switching to BadgeLink DEBUG mode");
+                            badgelink_over_debug_trigger = true;
+                        }
+                        line_len = 0;
+                    } else if (line_len < sizeof(line) - 1) {
+                        line[line_len++] = c;
+                    } else {
+                        // Line exceeded buffer; drop it and resync on the next newline.
+                        line_len = 0;
+                    }
+                }
+
+                if (!badgelink_over_debug_trigger) {
+                    continue;
+                }
+
+                // Switch over to badgelink over debug mode by disabling log output
+                fflush(stdout);
+                usb_serial_jtag_wait_tx_done(pdMS_TO_TICKS(100));
+                disable_log_output();
+            }
+            badgelink_rxdata_cb(buffer, n);
+        }
+    }
+}
+
 void usb_initialize(void) {
     ESP_LOGI(TAG, "USB initialization");
-
-    // usb_mode_set(USB_DEVICE);
 
     bsp_device_get_manufacturer(usb_vendor, USB_STRING_LENGTH);
     bsp_device_get_name(usb_product, USB_STRING_LENGTH);
@@ -284,6 +382,8 @@ void usb_initialize(void) {
     // Return to debug mode after initializing the USB stack
     usb_mode_set(USB_DEBUG);
 #endif
+
+    xTaskCreate(usb_debug_listener_task, "USB debug listener", LISTENER_TASK_STACK_SIZE, NULL, 5, NULL);
 }
 
 uint16_t webusb_esp32_status                      = 0x0000;
@@ -378,7 +478,9 @@ void tud_vendor_rx_cb(uint8_t itf, uint8_t const* buffer, uint16_t bufsize) {
     }
 
     if (bufsize > 0) {
-        badgelink_rxdata_cb(buffer, bufsize);
+        if (current_mode == USB_DEVICE) {
+            badgelink_rxdata_cb(buffer, bufsize);
+        }
 #if CFG_TUD_VENDOR_RX_BUFSIZE > 0
         tud_vendor_read_flush();
 #endif
@@ -388,17 +490,29 @@ void tud_vendor_rx_cb(uint8_t itf, uint8_t const* buffer, uint16_t bufsize) {
         uint32_t available;
         while ((available = tud_vendor_available()) > 0) {
             uint32_t read = tud_vendor_read(rx_buf, sizeof(rx_buf));
-            badgelink_rxdata_cb(rx_buf, read);
+            if (current_mode == USB_DEVICE) {
+                badgelink_rxdata_cb(rx_buf, read);
+            }
         }
     }
 }
 
 void usb_send_data(uint8_t const* data, size_t len) {
-    while (len) {
-        uint32_t max = tud_vendor_write(data, len);
-        tud_vendor_write_flush();
-        data += max;
-        len  -= max;
+    if (current_mode == USB_DEVICE) {
+        while (len) {
+            uint32_t max = tud_vendor_write(data, len);
+            tud_vendor_write_flush();
+            data += max;
+            len  -= max;
+        }
+    } else if (current_mode == USB_DEBUG) {
+        size_t remaining_size = len;
+        while (remaining_size) {
+            size_t xfer_size = remaining_size;
+            if (xfer_size > 32) xfer_size = 32;
+            usb_serial_jtag_write_bytes(&data[len - remaining_size], xfer_size, portMAX_DELAY);
+            remaining_size -= xfer_size;
+        }
     }
 }
 
